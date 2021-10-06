@@ -1,5 +1,4 @@
 source('Rscripts/00_carregar_bibliotecas.R')
-setwd('F:/Meu repositório/dissertacao/')
 
 # Credenciais 
 credencial <- Sys.getenv("CREDENCIAL_BASE_DOS_DADOS")
@@ -32,7 +31,12 @@ bairros.rj.ativos <- left_join(bairros.rj.ativos,cod.bairros,by=c('bairros_rj'='
 bairros.rj.ativos <- bairros.rj.ativos %>% 
                      drop_na() # remove linhas que contenham um campo com NA
 
+
+
+
+
 # Continuar daqui (plotar mapa)
+
 
 
 # 2 - Evolução dos vínculos ativos na cidade do Rio de Janeiro
@@ -43,6 +47,7 @@ df <- read_sql(query)
 df$vinculos_ativos <- as.numeric(df$vinculos_ativos)
 df$ano <- as.numeric(df$ano)
 
+
 # Gráfico com a evolução anual de vínculos ativos (em milhões)
 ggplot(df,aes(ano,vinculos_ativos/1000000))+
   ggtitle("Evolução dos vínculos ativos de emprego formais \n na cidade do Rio de Janeiro")+
@@ -50,7 +55,7 @@ ggplot(df,aes(ano,vinculos_ativos/1000000))+
   geom_point(color='black')+
   ylab('Vinculos formais ativos (em milhões)')+
   scale_x_continuous(name = 'Ano', # dado do eixo x
-                     limits = c(1985,2019),  # valor máximo e mínimo do eixo
+                     limits = c(2010,2019),  # valor máximo e mínimo do eixo
                      n.breaks = 10) +
   theme(panel.background = element_blank())+
   theme(panel.background = element_blank(),plot.title = element_text(hjust = 0.5))# centraliza o texto
@@ -71,7 +76,7 @@ ggplot(df,aes(ano,vinculos/1000000))+
   geom_point(color='black')+
   ylab('Vinculos formais (em milhões)')+
   scale_x_continuous(name = 'Ano', # dado do eixo x
-                     limits = c(1985,2019),  # valor máximo e mínimo do eixo
+                     limits = c(2010,2019),  # valor máximo e mínimo do eixo
                      n.breaks = 10) +
   theme(panel.background = element_blank(),plot.title = element_text(hjust = 0.5))# centraliza o texto
 
@@ -88,11 +93,16 @@ df.onibus$ano <- as.numeric(df.onibus$ano)
 ggplot(df.onibus,aes(ano,vinculos_ativos))+
   geom_line(color='blue', linetype = 'dashed')+
   geom_point(color='black')+
-  ylab('Vinculos formais ativos')+
+  ylab('Vinculos formais ativos de empregados em \n empresas de ônibus municipal ou na RM')+
+  scale_y_continuous(limits = c(7500,9000),  # valor máximo e mínimo do eixo
+                     n.breaks = 6)+
   scale_x_continuous(name = 'Ano', # dado do eixo x
-                     limits = c(2006,2019),  # valor máximo e mínimo do eixo
+                     limits = c(2008,2019),  # valor máximo e mínimo do eixo
                      n.breaks = 10) +
   theme(panel.background = element_blank())
+
+ggsave('output/01_rais/01_cnae_49213_muni_rio_rais.png')
+
 
 # Vinculos formais ativos da ocupação cobrador de transportes coletivos (exceto trem) CBO: 511215
 query <- "SELECT id_municipio,ano,cbo_2002,SUM(vinculo_ativo_3112) as vinculos_ativos FROM `basedosdados.br_me_rais.agregado_vinculos_municipio_vinculo_ativo_cbo_cnae_natureza_juridica_idade_sexo_raca`
@@ -108,9 +118,12 @@ ggplot(df.trocador,aes(ano,vinculos_ativos))+
   geom_point(color='black')+
   ylab('Vinculos formais ativos da ocupação \n cobrador de transportes coletivos (exceto trem)')+
   scale_x_continuous(name = 'Ano', # dado do eixo x
-                     limits = c(2003,2019),  # valor máximo e mínimo do eixo
+                     limits = c(2008,2019),  # valor máximo e mínimo do eixo
                      n.breaks = 10) +
   theme(panel.background = element_blank())
+
+ggsave('output/01_rais/01_cob_511215_muni_rio_rais.png')
+
 
 # Vínculos formais ativos da ocupação motorista de ônibus urbano CBO:782410
 query <- "SELECT id_municipio,ano,cbo_2002,SUM(vinculo_ativo_3112) as vinculos_ativos FROM `basedosdados.br_me_rais.agregado_vinculos_municipio_vinculo_ativo_cbo_cnae_natureza_juridica_idade_sexo_raca`

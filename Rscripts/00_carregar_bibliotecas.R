@@ -1,5 +1,4 @@
 # Carregar bibliotecas
-# Carregar bibliotecas
 library(readxl) # ler arquivos xls
 library(tidyverse) # manipulação de dados
 library(gt) # tabelas
