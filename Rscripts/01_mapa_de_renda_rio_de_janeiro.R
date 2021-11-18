@@ -1,5 +1,4 @@
 # Renda por bairro da cidade do Rio
-
 #Fonte: Censo de 2010 e dados do IPP e da SMT do Rio (dados do trajeto do BRT)
 rm(list = ls())
 
@@ -13,6 +12,8 @@ library(geobr)
 library(tmap)
 library(tmaptools)
 library(leaflet)
+library(nngeo)
+
 options(scipen=10000) 
 
 sf_use_s2(FALSE) # usar sempre antes do st_intersection após a versão 1.0 do sf
@@ -23,6 +24,32 @@ micro.e.bairros <- read_sf('input/rj_setores_censitarios_limites/33SEE250GC_SIR.
   as.data.frame() %>% 
   select(-geometry) %>%  #Aqui eu precisei transformar o objeto SF em dataframe para depois selecionar a coluna geometry e retirar.
   select(2:5)
+
+
+# teste com geobr#############
+geobr::lookup_muni(name_muni = 'Rio de Janeiro')
+shape.muni <- read_census_tract(year = 2010, code_tract = 3304557, simplified = F)
+# simplified = F permite que o shape venha mais limpo.
+
+teste <- shape.muni %>% 
+  group_by(code_neighborhood, name_neighborhood) %>% 
+  summarise(geometry = st_union(geom)) %>% 
+  st_remove_holes() 
+
+plot(teste$geom)
+
+
+  
+
+plot(teste$geometry)
+
+# MODO CORRETO
+plot(malha.rj$geometry)
+
+
+
+
+######################
 
 # Shapefile da cidade por bairros (fiz no Qgis para remover as inconsistências no arquivo do IBGE).
 malha.rj <- read_sf('input/bairros_rj_editado_igor/bairros_rj.shp')
@@ -119,47 +146,47 @@ dados.sem.rendimento <- dados %>%
 dados.ate.um.sm.df <- dados.ate.um.sm %>% 
                         as.data.frame() %>% 
                         select(-geometry) %>%  
-                        select('percentual.ate.um.sm','CD_GEOCODB')
+                        select('percentual.ate.um.sm','CD_GEOCODB','NM_BAIRRO')
 
 dados.ate.dois.sm.df <- dados.ate.dois.sm %>% 
                           as.data.frame() %>% 
                           select(-geometry) %>%  
-                          select('percentual.ate.dois.sm','CD_GEOCODB')
+                          select('percentual.ate.dois.sm','CD_GEOCODB','NM_BAIRRO')
 
 dados.ate.tres.sm.df <- dados.ate.tres.sm %>% 
                           as.data.frame() %>% 
                           select(-geometry) %>%  
-                          select('percentual.ate.tres.sm','CD_GEOCODB')
+                          select('percentual.ate.tres.sm','CD_GEOCODB','NM_BAIRRO')
 
 dados.ate.cinco.sm.df <- dados.ate.cinco.sm %>% 
                             as.data.frame() %>% 
                             select(-geometry) %>%  
-                            select('percentual.ate.cinco.sm','CD_GEOCODB')
+                            select('percentual.ate.cinco.sm','CD_GEOCODB','NM_BAIRRO')
 
 dados.mais.de.cinco.sm.df <- dados.mais.de.cinco %>% 
                               as.data.frame() %>% 
                               select(-geometry) %>%  
-                              select('percentual.mais.de.cinco.sm','CD_GEOCODB')                                            
+                              select('percentual.mais.de.cinco.sm','CD_GEOCODB','NM_BAIRRO')                                            
 
 dados.mais.de.dez.sm.df <- dados.mais.de.dez %>% 
                               as.data.frame() %>% 
                               select(-geometry) %>%  
-                              select('percentual.mais.de.dez.sm','CD_GEOCODB')    
+                              select('percentual.mais.de.dez.sm','CD_GEOCODB','NM_BAIRRO')    
 
 dados.mais.de.quinze.sm.df <- dados.mais.de.quinze %>% 
                                 as.data.frame() %>% 
                                 select(-geometry) %>%  
-                                select('percentual.mais.de.quinze.sm','CD_GEOCODB')  
+                                select('percentual.mais.de.quinze.sm','CD_GEOCODB','NM_BAIRRO')  
 
 dados.mais.de.vinte.sm.df <- dados.mais.de.vinte %>% 
                                 as.data.frame() %>% 
                                 select(-geometry) %>%  
-                                select('percentual.mais.de.vinte.sm','CD_GEOCODB')  
+                                select('percentual.mais.de.vinte.sm','CD_GEOCODB','NM_BAIRRO')  
 
 dados.sem.rendimento.df <- dados.sem.rendimento %>% 
                               as.data.frame() %>% 
                               select(-geometry) %>%  
-                              select('percentual.sem.rendimento','CD_GEOCODB')  
+                              select('percentual.sem.rendimento','CD_GEOCODB','NM_BAIRRO')  
 
 percentual.faixa.sm <- dados.ate.meio.sm %>%
                         full_join(dados.ate.um.sm.df, by = 'CD_GEOCODB') %>% 
@@ -174,13 +201,13 @@ percentual.faixa.sm <- dados.ate.meio.sm %>%
   
 # Transformar em um arquivo no formato GeoPackage, pq shapefile não aceita nomes de variáveis longos e cria vários arquivos. 
 # Usar o pacote sf para abrir. Este arquivo será usado com o Shiny.
-sf::st_write(percentual.faixa.sm, dsn = 'temp/shapes_para_shiny/bairros_e_renda_rj.gpkg')
+sf::st_write(percentual.faixa.sm, append = F, dsn = 'temp/shapes_para_shiny/bairros_e_renda_rj.gpkg')
 
 # Salvar Shapefiles dos modais com alterações
-sf::st_write(trajetos.brt, dsn = 'temp/shapes_para_shiny/brt.gpkg')
-sf::st_write(trajetos.trem.cidade, dsn = 'temp/shapes_para_shiny/trem.gpkg')
-sf::st_write(trajetos.vlt, dsn = 'temp/shapes_para_shiny/vlt.gpkg')
-sf::st_write(trajetos.metro, dsn = 'temp/shapes_para_shiny/metro.gpkg')
+sf::st_write(trajetos.brt, append = F, dsn = 'temp/shapes_para_shiny/brt.gpkg')
+sf::st_write(trajetos.trem.cidade, append = F, dsn = 'temp/shapes_para_shiny/trem.gpkg')
+sf::st_write(trajetos.vlt, append = F, dsn = 'temp/shapes_para_shiny/vlt.gpkg')
+sf::st_write(trajetos.metro, append = F, dsn = 'temp/shapes_para_shiny/metro.gpkg')
 
 # Transforma paleta de cores de 9 cores para 10 cores (assim como o colors=mycolors no ggplot)
 nb.cols <- 10
@@ -248,13 +275,13 @@ ggplot(dados.ate.cinco.sm)+
   geom_sf(data = trajetos.metro, aes(col = 'Metrô'), size = 0.75, show.legend = 'line')+
   geom_sf(data = trajetos.trem.cidade, aes(col = 'Trem'), size = 0.75, show.legend = 'line')+
   scale_color_manual(values = c("#D34945","#9045D3","#45CFD3","#88D345"))+ 
-  labs(col="Modal de Transporte:")+ # Nome das legendas
+  labs(col = "Modal de Transporte:")+ # Nome das legendas
   scale_fill_gradientn(colors = mycolors,
                        breaks = c(0,0.2,0.4,0.6))+#rev reverte a ordem
-  labs(fill='') + #Muda o nome da legenda com o fill.
+  labs(fill = '') + #Muda o nome da legenda com o fill.
   guides(colour = guide_legend(title.position = "top"))+
-  annotation_scale(location='br')+ #Adiciona escala
-  annotation_north_arrow(location='tl', 
+  annotation_scale(location = 'br')+ #Adiciona escala
+  annotation_north_arrow(location = 'tl', 
                          style = north_arrow_fancy_orienteering())+
   theme_minimal()+
   theme(legend.position = 'bottom', legend.direction = "horizontal") + theme_bw() + #daqui p baixo tira o grid do mapa
@@ -265,10 +292,11 @@ ggplot(dados.ate.cinco.sm)+
 
 ggsave('output/01_mapas_renda/percentatécincoSM.png', width = 9, height = 6)
 
-# Mapa interativo até 5 SM utilizando tmaps e leaflet
 
+# Mapa interativo até 5 SM utilizando tmaps e leaflet
+dados.ate.cinco.sm <- dados.ate.cinco.sm %>% select(!CD_GEOCODB) # remove o código do bairro
 tm_shape(dados.ate.cinco.sm) +
-  tm_polygons("percentual.ate.cinco.sm", id = "NM_BAIRRO", palette = "Greens", title = "Percentual sobre o total do bairro",
+  tm_polygons("percentual.ate.cinco.sm", palette = "Greens", title = "Percentual sobre <br>o total do bairro",
               labels = c("10% - 20%",
                          "20% - 30%",
                          "30% - 40%",
@@ -276,19 +304,26 @@ tm_shape(dados.ate.cinco.sm) +
                          "50% - 60%",
                          "60% - 70%"))+
   tm_scale_bar()+
-   tm_text("NM_BAIRRO", scale=0.75)+
-  tm_shape(trajetos.brt)+
-    tm_lines(col = "#D34945", lwd = 2)+
+   #tm_text("NM_BAIRRO", scale=0.75)+
+  tm_shape(trajetos.brt)+ #
+    tm_lines(col = "#D34945", lwd = 2, labels = 'BRT')+ # adiciona o nome do modal ao passar o mouse por cima
   tm_shape(trajetos.vlt)+
-    tm_lines(col = "#9045D3", lwd = 2)+
+    tm_lines(col = "#9045D3", lwd = 2, labels = 'VLT')+
   tm_shape(trajetos.metro)+
-    tm_lines(col = "#45CFD3", lwd = 2)+
+    tm_lines(col = "#45CFD3", lwd = 2, labels = 'Metrô')+
   tm_shape(trajetos.trem.cidade)+
-    tm_lines(col = "#88D345", lwd = 2)
+    tm_lines(col = "#88D345", lwd = 2, labels = 'Trem') +
+  tm_add_legend(type = 'fill', 
+                col =c("#D34945","#9045D3","#45CFD3","#88D345"),
+                size = 2,
+                labels = c('BRT','VLT','Metrô','Trem'),
+                title="Modal")
   
 tmap_mode("view")
 mapa.bairros.dinamico <- tmap_last()
+mapa.bairros.dinamico
 tmap_save(mapa.bairros.dinamico,'output/01_mapas_renda/mapa_bairros_rj.html')
+
 
 # Gráfico acima de 5 SM
 
