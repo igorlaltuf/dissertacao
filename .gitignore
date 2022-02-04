@@ -6,4 +6,4 @@
 .httr-oauth
 .DS_Store
 *.env
-*/Input
+/Input/dados_fin_bndes
