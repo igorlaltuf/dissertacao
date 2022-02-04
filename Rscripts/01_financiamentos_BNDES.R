@@ -91,7 +91,9 @@ em_bilhoes <- 1000000000
 # Corrigir pelo IGP-DI MENSAL
 # Incluir coluna com valor deflacionado ao mês
 all.data <- mutate(all.data,
-                   valor_contratado_deflac_ao_mes = deflate(valor_contratado_em_reais,as.Date(ymd(all.data$data_da_contratacao)),'11/2020','igpdi')
+                   valor_contratado_deflac_ao_mes = deflate(valor_contratado_em_reais,
+                                                            as.Date(ymd(all.data$data_da_contratacao)),
+                                                            '11/2020','igpdi')
                    )
 # IMPORTANTE, ELE DEFLACIONA INCLUSIVE OS VALORES DO MÊS QUE ESTOU TRAZENDO O VALOR.
 # Eu coloquei 11/2020 para o R não deflacionar os valores de dezembro de 2020, já que eu quero os valores ao mês de dezembro de 2020.
@@ -276,7 +278,7 @@ estados.mapa <- all.data %>%
 estados.mapa <- estados.mapa[-10,] # Exclui a linha IE (interestadual)
 colnames(estados.br)[2] <- "uf"
 
-estados.br <- left_join(estados.br,estados.mapa,by = "uf")
+estados.br <- left_join(estados.br,estados.mapa, by = "uf")
                               
                               
 tm_shape(estados.br) +
@@ -336,6 +338,8 @@ formattable(empreiteiras.brt.tabela.nacional,
             align =c("l","c","c","c"),
             list(`Grupo Econômico` = formatter(
               "span", style = ~ style(font.weight = "bold"))))
+
+write.csv2(empreiteiras.brt.tabela.nacional, file = 'output/01_bndes/grupos_brt_brasil.csv')
 
 
 # Gráfico do montante de empréstimos agrupado por grupos economicos entre 2002 e 2020
@@ -414,7 +418,7 @@ formattable(empreiteiras.brt.tabela.rj,
             list(`Grupo Econômico` = formatter(
               "span", style = ~ style(font.weight = "bold"))))
 
-
+write.csv2(empreiteiras.brt.tabela.rj, file = 'output/01_bndes/grupos_brt_rio_de_janeiro.csv')
 
 # Empréstimos do BNDES ano a ano aos grupos econômicos do BRT de 2002 a 2020 na cidade do RIo.
 empreiteiras.brt.sintese.rj <- empreiteiras.brt.rj %>% 
@@ -470,4 +474,63 @@ formattable(fabr.carrocerias.brt.tabela,
             list(`Grupo Econômico` = formatter(
               "span", style = ~ style(font.weight = "bold")))) 
 
-ggsave('output/01_bndes/encarroçadoras total no período cidade do rio.png', width = 9, height = 6)  
+ggsave('output/01_bndes/encarroçadoras total no período cidade do rio.png', width = 9, height = 6) 
+
+
+
+
+# Financiamentos de infraestrutura na cidade do Rio de Janeiro
+infra.rj <- all.data %>% 
+  filter(str_detect(município_código,'3304557'),
+         str_detect(setor_bndes,'INFRAESTRUTURA|INFRA-ESTRUTURA')) 
+
+infra.rj.ano <- infra.rj %>% 
+  select(ano, valor_contratado_em_reais, valor_desembolsado_em_reais, valor_contratado_deflac_ao_mes) 
+
+infra.rj.ano <- group_by(infra.rj.ano, ano) %>% 
+  summarise(across(everything(), list(sum)))
+
+infra.rj.ano <- infra.rj.ano %>% 
+  mutate(valor_contr_bi = round(valor_contratado_em_reais_1/em_bilhoes,1),
+         valor_contr_defl_ao_mes_bi = round(valor_contratado_deflac_ao_mes_1/em_bilhoes,1),
+         valor_desemb_bi = round(valor_desembolsado_em_reais_1/em_bilhoes,1)
+  )
+
+# Gráfico
+x <- ggplot(infra.rj.ano, aes(x = ano, y = valor_contr_defl_ao_mes_bi))+
+  geom_col(fill='#266DD3')+
+  scale_y_continuous(expand = expansion(mult = c(0, .1)))+ # retira o gap entre o eixo x e a barra
+  geom_text(aes(label = as.character(round(valor_contr_defl_ao_mes_bi,2)), vjust = -1)) +  # as.character e round é para não mostrar os decimais no gg animate
+  xlab('Ano') + ylab('Valor em R$ bilhões') +
+  #daqui para baixo é para tirar o fundo do gráfico
+  theme_bw() + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) 
+
+x
+ggsave('output/01_bndes/valor_contr_defl_infraestrutura_rj.png', dpi = 300, width = 9, height = 6)
+
+# Financiamentos de infraestrutura na cidade do Rio de Janeiro por subsetor cnae agrupado
+infra.rj$subsetor_cnae_agrupado <- tolower(infra.rj$subsetor_cnae_agrupado)
+
+infra.rj <- infra.rj %>% 
+  select(subsetor_cnae_agrupado, valor_contratado_em_reais, valor_desembolsado_em_reais, valor_contratado_deflac_ao_mes) 
+
+infra.rj <- group_by(infra.rj, subsetor_cnae_agrupado) %>% 
+  summarise(across(everything(), list(sum)))
+
+infra.rj <- infra.rj %>% 
+  mutate(valor_contr_bi = round(valor_contratado_em_reais_1/em_bilhoes,1),
+         valor_contr_defl_ao_mes_bi = round(valor_contratado_deflac_ao_mes_1/em_bilhoes,1),
+         valor_desemb_bi = round(valor_desembolsado_em_reais_1/em_bilhoes,1)
+  )
+
+# Exportar em CSV
+write.csv2(infra.rj, 'output/01_bndes/bndes_fin_subsetor_cnae_agrupado.csv')
+
+
+# grupos
+unique(infra.rj$subsetor_cnae_agrupado)
+
+
+
