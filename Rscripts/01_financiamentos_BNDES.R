@@ -532,5 +532,3 @@ write.csv2(infra.rj, 'output/01_bndes/bndes_fin_subsetor_cnae_agrupado.csv')
 # grupos
 unique(infra.rj$subsetor_cnae_agrupado)
 
-
-
