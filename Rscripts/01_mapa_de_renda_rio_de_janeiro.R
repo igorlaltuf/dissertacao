@@ -33,8 +33,7 @@ shape.muni <- read_census_tract(year = 2010, code_tract = 3304557, simplified = 
 
 teste <- shape.muni %>% 
   group_by(code_neighborhood, name_neighborhood) %>% 
-  summarise(geometry = st_union(geom)) %>% 
-  st_remove_holes() 
+  summarise(geometry = st_union(geom)) 
 
 plot(teste$geom)
 

@@ -8,3 +8,4 @@
 *.env
 /input/dados_fin_bndes
 /input/rdo-brt
+/input/covid
