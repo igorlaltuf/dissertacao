@@ -1,59 +1,58 @@
-# ITBI no entorno da Transoeste
+# ITBI no entorno das estações do BRT Transoeste 
+
+# Obras de julho de 2010 até julho de 2012.
 
 options(scipen = 9999)
 source('Rscripts/01_itbi.R') # inclui as bibliotecas que serão usadas
 
-# ---------------------------------------------------
-
-# importar dados das estações
+# 1 - importar dados das estações e filtrar dados do corredor ---------------------------------------------------
 estacoes_BRT <- sf::st_read('input/estacoes-brt/estacoes_BRT.shp')
 
-# 4 - análise da transoeste (obras de 2010 a 2012) --------------------------------------------------
 # ver bairros com estações da transoeste com dados disponíveis de 2010 até 2012.
-brt_oeste <- estacoes_BRT %>% 
+brt_corredor <- estacoes_BRT %>% 
   janitor::clean_names() %>% 
   dplyr::filter(flg_trans_o == 1)
-
 
 bairros <- geobr::read_neighborhood() %>% 
   dplyr::filter(code_muni == '3304557')
 
 st_crs(bairros)
-st_crs(brt_oeste)
+st_crs(brt_corredor)
 
-brt_oeste <- st_transform(brt_oeste, 4674)
+brt_corredor <- st_transform(brt_corredor, 4674)
 
-bairros_brt_o <- st_intersection(bairros, brt_oeste)
+bairros_brt_c <- st_intersection(bairros, brt_corredor)
 
-estacoes_oeste <- bairros_brt_o %>% 
+estacoes_corredor <- bairros_brt_c %>% 
   group_by(name_neighborhood) %>% 
   count() %>% 
   arrange(desc(n)) %>% 
   mutate(name_neighborhood = tolower(name_neighborhood))
 
-bairros_oeste <- itbi_m2_bairro %>% 
+bairros_corredor <- itbi_m2_bairro %>% 
   mutate(bairro = tolower(bairro)) %>% 
-  dplyr::filter(bairro %in% estacoes_oeste$name_neighborhood) %>% 
+  dplyr::filter(bairro %in% estacoes_corredor$name_neighborhood) %>% 
   select(codbairro) %>% 
   as_vector()
 
-
 itbi_m2 <- itbi_m2_bairro %>% 
-  dplyr::filter(codbairro %in% bairros_oeste,
+  dplyr::filter(codbairro %in% bairros_corredor,
                 x2010 != 0) 
 
 
+# 2 - calcular a área do entorno das estações --------------------------------------------------------------------------
 
+# 2.1 - calcular o entorno de 15 minutos --------------------------------------------------------------------
 
-# Calcular área de entorno --------------------------------------------------------------------------------
-# importante: Usar versão 1.5 do OTP e versão 8 do Java por questões de funções que não funcionam
+# install.packages("opentripplanner") 
+# importante!!! Usar versão 1.5 do OTP e versão 8 do Java por questões de funções que não funcionam
 
-path_data <- file.path('temp/', "OTP") # Make a folder to store the data
-dir.create(path_data)
+path_data <- file.path('temp/', "OTP") # Make a folder to store the data 
+dir.create(path_data)  
 
 # Download do OTP (precisa ser a versão acima da 2.0 para ser compatível com o java)
 # path_otp <- otp_dl_jar(path_data, version = '1.5.0', cache = F) 
-# otp_check_java(otp_version = 1.5)
+otp_check_java(otp_version = 1.5)
 
 # função para verificar se está funcionando?
 opentripplanner:::otp_checks(otp = 'temp/OTP/otp-1.5.0-shaded.jar',
@@ -67,11 +66,11 @@ options(java.parameters = "-Xmx8G") # R permite que o java use até 8gb de ram
 
 # rodar apenas uma vez
 # construir o grafo que representa a rede da malha viária do Rio e que permite o roteamento
-log <- otp_build_graph(otp = 'temp/OTP/otp-1.5.0-shaded.jar',
-                       memory = 8000, # mem ram para fazer a análise
-                       dir = 'temp', # diretório para salvar o graph
-                       router = 'default',
-                       otp_version = 1.5) # área que quero baixar (rio de Janeiro)
+# log <- otp_build_graph(otp = 'temp/OTP/otp-1.5.0-shaded.jar',
+#                        memory = 8000, # mem ram para fazer a análise
+#                        dir = 'temp', # diretório para salvar o graph
+#                        router = 'default',
+#                        otp_version = 1.5) # área que quero baixar (rio de Janeiro)
 
 otp_setup(otp = 'temp/OTP/otp-1.5.0-shaded.jar',
           dir = 'temp',
@@ -79,14 +78,12 @@ otp_setup(otp = 'temp/OTP/otp-1.5.0-shaded.jar',
           port = 8080,
           wait = F)
 
-
 otp_rj <- otp_connect()
 
-
-brt_oeste <- brt_oeste %>% 
+brt_corredor <- brt_corredor %>% 
   dplyr::mutate(lon = sf::st_coordinates(.)[,1],
                 lat = sf::st_coordinates(.)[,2]) %>% 
-  select(objectid, nome, lat, lon)
+  select(objectid, nome, lat, lon) 
 
 
 # criar o entorno das estações a partir do tempo de caminhada.
@@ -94,25 +91,28 @@ temp_min <- 15
 temp_seg <- temp_min * 60
 
 area_15min <- otp_isochrone(otpcon = otp_rj,
-                            fromPlace = brt_oeste, # local de partida
+                            fromPlace = brt_corredor, # local de partida
                             cutoffSec = temp_seg,    # tempo de viagem em segundos
                             mode = 'WALK',
-                            fromID = brt_oeste$nome) 
-
+                            fromID = brt_corredor$nome
+) 
 
 # checar área em 15 min
 mapview::mapview(area_15min)
 
+
+
+# 2.2 - calcular o entorno de 45 minutos --------------------------------------------------------------------
 
 # area até 45 min
 temp_min <- 45
 temp_seg <- temp_min * 60
 
 area_45min <- otp_isochrone(otpcon = otp_rj,
-                            fromPlace = brt_oeste, # local de partida
+                            fromPlace = brt_corredor, # local de partida
                             cutoffSec = temp_seg,    # tempo de viagem em segundos
                             mode = 'WALK',
-                            fromID = brt_oeste$nome
+                            fromID = brt_corredor$nome
 )
 
 # checar área em 45 min
@@ -120,7 +120,9 @@ mapview::mapview(area_45min)
 
 
 
-# Separar ruas acessíveis até 15 min das estações ------------------------------------------------------------------
+# 3 - Calculos das ruas no entorno das estações ------------------------------------------------------------
+
+# 3.1 Separar ruas acessíveis até 15 min das estações ------------------------------------------------------
 st_crs(area_15min)
 st_crs(shape_ruas)
 
@@ -131,87 +133,80 @@ df1 <- st_intersection(shape_ruas, area_15min)
 # plot(df1$geometry)
 # mapview::mapview(df1)
 
-# Separar bairros que tenho dados de 2010 até 2012
+# Separar ruas do entorno de 15 minutos que tenho dados para os anos da obra
 df1 <- left_join(df1, itbi_m2_rua, by = 'cl') %>% 
   na.omit() %>% 
   dplyr::filter(x2010 != 0,
                 x2011 != 0,
                 x2012 != 0
-  ) %>%  
-  select(cl, logradouro, codbairro, bairro, x2010, x2011, x2012) %>% 
-  group_by(cl, logradouro, codbairro, bairro, x2010, x2011, x2012) %>% 
-  summarise(geometry = st_union(geometry))
+                ) %>%  
+  select(cl, logradouro, fromPlace, codbairro, bairro, x2010, x2011, x2012) %>% 
+  group_by(cl, logradouro, fromPlace, codbairro, bairro, x2010, x2011, x2012) %>% 
+  summarise(geometry = st_union(geometry)) 
+
+# 3.2 Calcular a taxa média de crescimento anual das ruas acessíveis em 15 minutos ------------------------------
+df_1_estacao <- df1 %>% 
+  group_by(fromPlace) %>% 
+  summarise(across(starts_with("x"), ~ mean(., na.rm = T)),
+            across(starts_with("x"), ~ round(., 2))) %>% 
+  mutate(var2011 = round((x2011 / x2010) -1, 2),
+         var2012 = round((x2012 / x2011) -1, 2),
+         tx_med_anual = round((var2011 + var2012) / 2, 2))
 
 mapview::mapview(df1)
 
-
-# remover bairros com menos de 5 ruas 
-ruas_p_bairro_15 <- df1 %>% 
-  group_by(bairro) %>% 
+# 3.3 Quantidade de ruas por estação do BRT em 15 minutos -------------------------------------------------------
+ruas_estacao_15 <- df1 %>%                               
+  group_by(fromPlace) %>% 
   count() %>% 
-  st_drop_geometry() %>% 
-  dplyr::filter(n >= 5)
-
-# agrupar valores das ruas acima por bairro
-df_15_min <- df1 %>% 
-  group_by(bairro) %>% 
-  summarise(across(starts_with("x"), ~ mean(., na.rm = T)),
-            across(starts_with("x"), ~ round(., 0))) %>% 
-  mutate(var2011 = (x2011 / x2010) -1,
-         var2012 = (x2012 / x2011) -1,
-         tx_med_anual_11_12 = (var2011 + var2012) / 2) %>% 
-  dplyr::filter(bairro %in% ruas_p_bairro_15$bairro) %>% 
-  group_by(bairro, x2010, x2011, x2012, tx_med_anual_11_12) %>% 
-  summarise(across(starts_with("var"), ~ round(., 2))) %>% 
-  mutate(tx_med_anual_11_12 = round(tx_med_anual_11_12, 2)) %>% 
-  arrange(desc(tx_med_anual_11_12))
-
-# ver shape dos 15 min
-mapview::mapview(df_15_min)
+  st_drop_geometry()
 
 
+# 3.4 - Separar ruas acessíveis até 45 min das estações ------------------------------------------------------
 
-# Separar ruas acessíveis até 45 min das estações ------------------------------------------------------
 df2 <- st_intersection(shape_ruas, st_buffer(area_45min, 0))
 
-df2 <- left_join(df2, itbi_m2_rua, by = 'cl') %>% 
+df2 <- left_join(df2, itbi_m2_rua, by = 'cl') %>%                         
   na.omit() %>% 
   dplyr::filter(x2010 != 0,
                 x2011 != 0,
                 x2012 != 0
   ) %>%  
-  select(cl, logradouro, codbairro, bairro, x2010, x2011, x2012) %>% 
-  group_by(cl, logradouro, codbairro, bairro, x2010, x2011, x2012) %>% 
-  summarise(geometry = st_union(geometry))
+  select(cl, logradouro, fromPlace, codbairro, bairro, x2010, x2011, x2012) %>% 
+  group_by(cl, logradouro, fromPlace, codbairro, bairro, x2010, x2011, x2012) %>% 
+  summarise(geometry = st_union(geometry)) 
+
+
+# 3.5 - Calcular a taxa média de crescimento anual das ruas acessíveis em 45 minutos ------------------------------
+
+df_2_estacao <- df2 %>% 
+  group_by(fromPlace) %>% 
+  summarise(across(starts_with("x"), ~ mean(., na.rm = T)),
+            across(starts_with("x"), ~ round(., 2))) %>% 
+  mutate(var2011 = round((x2011 / x2010) -1, 2),
+         var2012 = round((x2012 / x2011) -1, 2),
+         tx_med_anual = round((var2011 + var2012) / 2, 2))
 
 mapview::mapview(df2)
 
-# remover bairros com menos de 5 ruas 
-ruas_p_bairro_45 <- df2 %>% 
-  group_by(bairro) %>% 
+# 3.6 Quantidade de ruas por estação do BRT em 45 minutos -------------------------------------------------
+
+ruas_estacao_45 <- df2 %>%                                                     
+  group_by(fromPlace) %>% 
   count() %>% 
-  st_drop_geometry() %>% 
-  dplyr::filter(n >= 5)
-
-# agrupar valores das ruas acima por bairro
-df_45_min <- df2 %>% 
-  group_by(bairro) %>% 
-  summarise(across(starts_with("x"), ~ mean(., na.rm = T)),
-            across(starts_with("x"), ~ round(., 0))) %>% 
-  mutate(var2011 = (x2011 / x2010) -1,
-         var2012 = (x2012 / x2011) -1,
-         tx_med_anual_11_12 = (var2011 + var2012) / 2) %>% 
-  dplyr::filter(bairro %in% ruas_p_bairro_15$bairro) %>% 
-  group_by(bairro, x2010, x2011, x2012, tx_med_anual_11_12) %>% 
-  summarise(across(starts_with("var"), ~ round(., 2))) %>% 
-  mutate(tx_med_anual_11_12 = round(tx_med_anual_11_12, 2)) %>% 
-  arrange(desc(tx_med_anual_11_12))
-
-# ver shape dos 15 min
-mapview::mapview(df_45_min)
+  st_drop_geometry()
 
 
-# calcular variação anual em cada bairro
+# 3.7 Comparação da quantidade de ruas por estação  ------------------------------------------------------
+
+comp_ruas_estacao <- left_join(ruas_estacao_15, ruas_estacao_45, by = 'fromPlace') %>% 
+  rename('qtd_ruas_15_min' = n.x,
+         'qtd_ruas_45_min' = n.y) %>% 
+  arrange(desc(qtd_ruas_15_min))
+
+
+# 4 Calcular variação por bairro --------------------------------------------------------------------------
+
 df_bairros <- itbi_m2_bairro %>% 
   dplyr::filter(x2010 != 0,
                 x2011 != 0,
@@ -222,34 +217,154 @@ df_bairros <- itbi_m2_bairro %>%
   group_by(bairro, x2010, x2011, x2012) %>% 
   mutate(var2011 = (x2011 / x2010) -1,
          var2012 = (x2012 / x2011) -1,
-         tx_med_anual_11_12 = (var2011 + var2012) / 2) %>% 
-  group_by(bairro, x2010, x2011, x2012, tx_med_anual_11_12) %>% 
-  summarise(across(starts_with("var"), ~ round(., 2))) %>% 
-  mutate(tx_med_anual_11_12 = round(tx_med_anual_11_12, 2)) %>% 
-  arrange(desc(tx_med_anual_11_12))
+         tx_med_anual = (var2011 + var2012) / 2) %>% 
+         group_by(bairro, x2010, x2011, x2012, tx_med_anual) %>% 
+         summarise(across(starts_with("var"), ~ round(., 2))) %>% 
+         mutate(tx_med_anual = round(tx_med_anual, 2)) %>% 
+         arrange(desc(tx_med_anual))
 
-# Tabela final comparando dist 15 min, dist 45min e média do bairro (da taxa média de variação anual de 2011 até 2014). 
-df_15_min
-df_45_min
-df_bairros
+df_bairros <- df_bairros %>% ungroup() %>% select(bairro, tx_med_anual) %>% rename(tx_bairro = tx_med_anual) %>% 
+  mutate(bairro = tolower(bairro))
+
+# 5 Tabela final com o crescimento anual médio --------------------------------------------------------------------
 
 # recorte das variáveis de crescimento anual médio
-df_15_min_rec <- df_15_min %>% select(bairro, tx_med_anual_11_12) %>% st_drop_geometry() %>% rename(tx_15m = tx_med_anual_11_12)
-df_45_min_rec <- df_45_min %>% select(bairro, tx_med_anual_11_12) %>% st_drop_geometry() %>% rename(tx_45m = tx_med_anual_11_12)
-df_bairros_rec <- df_bairros %>% ungroup() %>% select(bairro, tx_med_anual_11_12) %>% rename(tx_bairro = tx_med_anual_11_12)
+df_15_min <- df_1_estacao %>% select(fromPlace, tx_med_anual) %>% st_drop_geometry() %>% rename(tx_15m = tx_med_anual)
+df_45_min <- df_2_estacao %>% select(fromPlace, tx_med_anual) %>% st_drop_geometry() %>% rename(tx_45m = tx_med_anual)
+
+# Adicionar o valor por bairro
+bairros_estac <- bairros_brt_c %>% 
+  select(nome, name_neighborhood) 
+
+df_brt <- left_join(df_15_min, df_45_min, by = c('fromPlace')) %>% 
+  left_join(bairros_estac, by = c('fromPlace' = 'nome')) %>%
+  mutate(name_neighborhood = tolower(name_neighborhood)) %>% 
+  left_join(df_bairros, by = c('name_neighborhood' = 'bairro')) %>% 
+  mutate(check_1 = ifelse(tx_15m > tx_45m, 1, 0)) %>% 
+  mutate(check_2 = ifelse(tx_15m > tx_bairro, 1, 0)) 
 
 
-df_transoeste <- left_join(df_15_min_rec, df_45_min_rec, by = 'bairro') %>% 
-  left_join(df_bairros_rec)
+# tabela final:
+df_brt
 
-# nos três bairros analisados a valorização foi menor no entorno do que no total do bairro.
+# check_1 compara as ruas no entorno de até 15 minutos com aquelas no entorno de 45 min.
+# check_2 compara as ruas no entorno de até 15 minutos com a média do bairro.
 
-# Tenho dados para 3 dos 8 bairros da transoeste
 
-# 
-# transoeste:
-#   julho 2010 até julho 2012
-# 
-# igp-m até 2019 (pq 2020 ele aumentou mt)
-# https://github.com/igorlaltuf/processo-republica/blob/main/rscripts/01_an%C3%A1lise_e_gr%C3%A1ficos.R
-# 
+# 6 Comentários --------------------------------------------------------------------------------------
+
+# das 50 estações do corredor transcarioca, foram analisadas 48 estações.
+sum(df_brt$check_1) # apenas 17 das 48 estações analisadas registraram uma valorização do entorno no check 1
+sum(df_brt$check_1) / 48 # apenas 35% das estações valorizou acima do entorno.
+
+sum(df_brt$check_2, na.rm = T) # nenhuma das 45 restações valorizou acima do bairro. 
+
+# sem dados para os bairros da maré, vaz lobo e cidade universitária = explica a diferença entre 45 e 48 bairros nos checks.
+
+
+# 7 - Mapas --------------------------------------------------------------------------------------------
+rj <- geobr::read_municipality(code_muni = 3304557)
+
+# 7.1 - Mapa com ruas de entorno dos corredores
+
+# mapa 1 - para cada corredor, plotar ruas do entorno de 15 ao lado das ruas com entorno de 45 min
+# mapa 15 min
+a <- ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = df1)+  # Whether to order the factor result or not
+  geom_sf(data = brt_corredor) +
+  coord_sf(xlim = c(-43.7, -43.21), ylim = c(-22.85, -23.03)) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() 
+
+a
+# mapa 45 min
+b <- ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = df2)+  # Whether to order the factor result or not
+  geom_sf(data = brt_corredor) +
+  coord_sf(xlim = c(-43.7, -43.21), ylim = c(-22.85, -23.03)) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() 
+
+b
+
+(a)/
+(b)
+
+ggsave('output/01_entorno_mapas/transoeste_15_45.png', scale = 1.2, width = 9, height = 6, dpi = 600)
+
+
+# 7.2 - Mapa do corredor BRT vs ruas que mais valorizaram no período
+
+taxas_ruas <- itbi_m2_rua %>% 
+  na.omit() %>% 
+  dplyr::filter(x2010 != 0,
+                x2011 != 0,
+                x2012 != 0) %>%
+  mutate(var2011 = (x2011 / x2010) -1,
+         var2012 = (x2012 / x2011) -1,
+         tx_med_anual = (var2011 + var2012) / 2) %>% 
+  group_by(cl, logradouro, x2010, x2011, x2012, tx_med_anual) %>% 
+  summarise(across(starts_with("var"), ~ round(., 2))) %>% 
+  mutate(tx_med_anual = round(tx_med_anual, 2)) %>% 
+  arrange(desc(tx_med_anual)) %>% 
+  ungroup() %>% 
+  select(cl, logradouro, tx_med_anual)
+  
+  
+
+# ruas com dados para o período
+taxas_ruas <- left_join(shape_ruas, taxas_ruas, by = 'cl') %>% 
+  na.omit()
+
+a <- ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = taxas_ruas) +  # Whether to order the factor result or not
+  geom_sf(data = brt_corredor) +
+  coord_sf(xlim = c(-43.7, -43.21), ylim = c(-22.85, -23.03)) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() 
+
+
+
+# recortar o 1/3 de ruas que mais valorizaram anualmente no período (acima do percentil 66%)
+quant_66 <- quantile(taxas_ruas$tx_med_anual, probs = .66)
+
+ruas_valorizadas <- taxas_ruas %>% 
+  dplyr::filter(tx_med_anual > quant_66)
+
+
+b <- ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = ruas_valorizadas) +  # Whether to order the factor result or not
+  geom_sf(data = brt_corredor) +
+  coord_sf(xlim = c(-43.7, -43.21), ylim = c(-22.85, -23.03)) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() 
+
+(a)/
+(b)
+
+
+ggsave('output/01_entorno_mapas/valorizacao_transoeste.png', scale = 1.2, width = 9, height = 6, dpi = 600)
+
+
+
+
+
+
+
+# Demais links:
+# razão de usar o buffer https://gis.stackexchange.com/questions/163445/getting-topologyexception-input-geom-1-is-invalid-which-is-due-to-self-intersec
+# https://docs.opentripplanner.org/en/latest/Basic-Tutorial/
+# https://itdpbrasil.org/tutorial-saiba-como-calcular-o-pnt/ Ver os dois últimos vídeos do PNT
+# fonte do arquivo pbf do rio de janeiro https://download.openstreetmap.fr/extracts/south-america/brazil/southeast/

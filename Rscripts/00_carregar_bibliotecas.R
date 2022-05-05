@@ -16,3 +16,5 @@ library(ggrepel) # impede que as labels do ggplot se sobreponham
 library(stringr) # para usar a função str_replace_all()
 library(readr)
 library(opentripplanner) # calcular área de entorno das estações
+library(haven) # manipular factors
+library(patchwork)

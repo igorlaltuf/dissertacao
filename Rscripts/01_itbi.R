@@ -47,8 +47,11 @@ itbi <- read_csv('input/itbi_rio_de_janeiro.csv') %>%
             media_valor_imovel = sum(media_valor_imovel),
             media_valor_m2 = media_valor_imovel / media_area_construida_m2)  
 
-# remover ponto de alavancagem (valor muito acima da média dos outros anos e do bairro): 
+# remover pontos de alavancagem (valor muito acima da média dos outros anos e do bairro): 
 itbi <- itbi[!(itbi$cl == "138982" & itbi$ano_transacao == 2011 & itbi$bairro == 'Jacarepaguá'),]
+itbi <- itbi[!(itbi$cl == "049072" & itbi$ano_transacao == 2011),]
+itbi <- itbi[!(itbi$cl == "031351" & itbi$ano_transacao == 2011),]
+
 
 
 # shape das ruas para fazer left join pela variável cl (ainda não fiz)
@@ -75,3 +78,40 @@ itbi_m2_bairro <- itbi_m2_rua %>%
   group_by(codbairro, bairro) %>% 
   summarise(across(starts_with("x"), ~ mean(., na.rm = T)),
             across(starts_with("x"), ~ round(., 0))) 
+
+
+
+
+
+# 4 Mapa total de ruas vs total de ruas com dados sobre ITBI em 2010.
+# rj <- geobr::read_municipality(code_muni = 3304557)
+# 
+# a <- ggplot() +
+#   geom_sf(data = rj) +
+#   geom_sf(data = shape_ruas) + 
+#   annotation_scale(location = 'br')+
+#   annotation_north_arrow(location = 'tl', 
+#                          style = north_arrow_fancy_orienteering()) +
+#   theme_classic() 
+# 
+# 
+# ruas_2010 <- left_join(shape_ruas, itbi_m2_rua, by = 'cl') %>% 
+#   dplyr::filter(x2010 > 0)
+# 
+# b <- ggplot() +
+#   geom_sf(data = rj) +
+#   geom_sf(data = ruas_2010) + 
+#   annotation_scale(location = 'br')+
+#   annotation_north_arrow(location = 'tl', 
+#                          style = north_arrow_fancy_orienteering()) +
+#   theme_classic() 
+# 
+# b
+# 
+# (a)/
+# (b)
+# 
+# ggsave('output/01_entorno_mapas/ruas_vs_ruas_dados_itbi_2010.png', scale = 1.2, width = 9, height = 6, dpi = 600)
+# 
+
+
