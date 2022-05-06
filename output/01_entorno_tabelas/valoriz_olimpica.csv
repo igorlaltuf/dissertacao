@@ -1,0 +1,10 @@
+"fromPlace";"tx_15m";"tx_45m";"name_neighborhood";"geom";"tx_bairro";"check_1";"check_2"
+"Bandeirantes";0,15;0,16;"jacarepaguá";c(-43.3936368940839, -22.9631033428388);0,13;0;1
+"Boiúna";0,1;0,11;"taquara";c(-43.3976330014564, -22.9164835836285);0,03;0;1
+"Marechal Fontenelle";0,15;0,12;"jardim sulacap";c(-43.4006960411475, -22.8860325118149);0,03;1;1
+"Minha Praia";0,15;0,17;"jacarepaguá";c(-43.3969071074762, -22.9666895847582);0,13;0;1
+"Tapebuias";0,16;0,16;"recreio dos bandeirantes";c(-43.4289769675291, -22.9994887421117);0,13;0;1
+"Terminal Centro Olímpico";0,18;0,17;"jacarepaguá";c(-43.4016260056401, -22.9725988639974);0,13;1;1
+"Terminal Salvador Allende";0,15;0,16;"recreio dos bandeirantes";c(-43.4409392915328, -23.0085862040953);0,13;0;1
+"Terminal Sulacap";0,15;0,12;"vila militar";c(-43.3995031085229, -22.8843029584463);NA;1;NA
+"Viva Viver";0,16;0,16;"recreio dos bandeirantes";c(-43.4340690686045, -23.0038716114657);0,13;0;1
