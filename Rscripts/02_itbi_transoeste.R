@@ -247,19 +247,35 @@ df_brt <- left_join(df_15_min, df_45_min, by = c('fromPlace')) %>%
 # tabela final:
 df_brt
 
+ruas_entorno_4 <- comp_ruas_estacao %>% 
+  dplyr::filter(qtd_ruas_15_min >= 4) %>% 
+  select(fromPlace) %>% 
+  as_vector()
+
+df_brt_entorno_4 <- df_brt %>% 
+  dplyr::filter(fromPlace %in% ruas_entorno_4)
+
+write.csv2(comp_ruas_estacao, 'output/01_entorno_tabelas/ruas_entorno_oeste.csv',
+           row.names = F, fileEncoding = 'UTF-8')
+
+write.csv2(df_brt_entorno_4, 'output/01_entorno_tabelas/valoriz_oeste.csv',
+           row.names = F, fileEncoding = 'UTF-8')
+
+
+
+
 # check_1 compara as ruas no entorno de até 15 minutos com aquelas no entorno de 45 min.
 # check_2 compara as ruas no entorno de até 15 minutos com a média do bairro.
 
 
 # 6 Comentários --------------------------------------------------------------------------------------
 
-# das 50 estações do corredor transcarioca, foram analisadas 48 estações.
-sum(df_brt$check_1) # apenas 17 das 48 estações analisadas registraram uma valorização do entorno no check 1
-sum(df_brt$check_1) / 48 # apenas 35% das estações valorizou acima do entorno.
 
-sum(df_brt$check_2, na.rm = T) # nenhuma das 45 restações valorizou acima do bairro. 
+sum(df_brt$check_1) 
+sum(df_brt$check_1) / 48 
 
-# sem dados para os bairros da maré, vaz lobo e cidade universitária = explica a diferença entre 45 e 48 bairros nos checks.
+sum(df_brt$check_2, na.rm = T) 
+
 
 
 # 7 - Mapas --------------------------------------------------------------------------------------------
@@ -356,6 +372,152 @@ b <- ggplot() +
 
 
 ggsave('output/01_entorno_mapas/valorizacao_transoeste.png', scale = 1.2, width = 9, height = 6, dpi = 600)
+
+
+
+# 7.3 Terminal Jardim Oceânico
+
+brt_jd <- brt_corredor %>% 
+  dplyr::filter(nome %in% 'Terminal Jd. Oceânico')
+
+jd_15 <- df1 %>% 
+  dplyr::filter(fromPlace %in% 'Terminal Jd. Oceânico')
+
+jd_45 <- df2 %>% 
+  dplyr::filter(fromPlace %in% 'Terminal Jd. Oceânico')
+
+a <- ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = jd_15) +  # Whether to order the factor result or not
+  geom_sf(data = brt_jd) +
+  coord_sf(xlim = c(-43.28, -43.35), ylim = c(-22.98, -23.02)) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() 
+a
+
+b <- ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = jd_45) +  # Whether to order the factor result or not
+  geom_sf(data = brt_jd) +
+  coord_sf(xlim = c(-43.28, -43.35), ylim = c(-22.98, -23.02)) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() 
+b
+
+(a)/
+(b)
+
+ggsave('output/01_entorno_mapas/entorno_jd_oceanico.png', scale = 1.2, width = 9, height = 6, dpi = 600)
+
+
+
+# 7.4 - Ruas que mais valorizaram entre 2010 e 2016 e todas as estações de BRT
+
+
+# 7.2 - Mapa do corredor BRT vs ruas que mais valorizaram no período
+
+taxas_ruas <- itbi_m2_rua %>% 
+  na.omit() %>% 
+  dplyr::filter(x2010 != 0,
+                x2011 != 0,
+                x2012 != 0,
+                x2013 != 0,
+                x2014 != 0,
+                x2015 != 0,
+                x2016 != 0) %>%
+  mutate(var2011 = (x2011 / x2010) -1,
+         var2012 = (x2012 / x2011) -1,
+         var2013 = (x2013 / x2012) -1,
+         var2014 = (x2014 / x2013) -1,
+         var2015 = (x2015 / x2014) -1,
+         var2016 = (x2016 / x2015) -1,
+         tx_med_anual = (var2011 + var2012 + var2013 + var2014 + var2015 + var2016) / 6) %>% 
+  group_by(cl, logradouro, x2010, x2011, x2012, x2013, x2014, x2015, x2016, tx_med_anual) %>% 
+  summarise(across(starts_with("var"), ~ round(., 2))) %>% 
+  mutate(tx_med_anual = round(tx_med_anual, 2)) %>% 
+  arrange(desc(tx_med_anual)) %>% 
+  ungroup() %>% 
+  select(cl, logradouro, tx_med_anual)
+
+
+
+# ruas com dados para o período
+taxas_ruas <- left_join(shape_ruas, taxas_ruas, by = 'cl') %>% 
+  na.omit()
+
+# recortar o 1/3 de ruas que mais valorizaram anualmente no período (acima do percentil 66%)
+quant_66 <- quantile(taxas_ruas$tx_med_anual, probs = .66)
+
+ruas_valorizadas <- taxas_ruas %>% 
+  dplyr::filter(tx_med_anual > quant_66)
+
+
+
+
+var_cari <- read_csv2('output/01_entorno_tabelas/valoriz_carioca.csv')
+var_oeste <- read_csv2('output/01_entorno_tabelas/valoriz_oeste.csv')
+var_olimp <- read_csv2('output/01_entorno_tabelas/valoriz_olimpica.csv')
+
+brt_operacao_var <- rbind(var_cari, var_oeste, var_olimp) %>% 
+  mutate(fromPlace = tolower(fromPlace)) 
+
+var_bairro <- brt_operacao_var %>% 
+  dplyr::filter(check_1 == 1) %>% 
+  group_by(name_neighborhood ) %>% 
+  count()
+
+
+  
+brt_operacao <- estacoes_BRT %>% 
+  dplyr::filter(Flg_TransB == 0) %>% 
+  mutate(Nome = tolower(Nome)) %>%  
+  dplyr::filter(Nome %in% brt_operacao_var$fromPlace)
+  
+brt_operacao_var <- brt_operacao_var %>% 
+  dplyr::filter(check_1 == 1)
+  
+brt_operacao_var <- brt_operacao %>% 
+  dplyr::filter(Nome %in% brt_operacao_var$fromPlace)
+
+
+ggplot() +
+  geom_sf(data = rj) +
+  geom_sf(data = ruas_valorizadas, aes(geometry = geometry,
+                                       col = 'Ruas mais valorizadas'),
+          size = 0.3, show.legend = 'line') +
+  geom_sf(data = brt_operacao, aes(geometry = geometry,
+                                   col = 'Estação com menor\nvalorização'), 
+          stat = "sf_coordinates", size = .8, show.legend = 'point') + 
+  geom_sf(data = brt_operacao_var, aes(geometry = geometry,
+                                       col = 'Estação com maior\nvalorização'), 
+          stat = "sf_coordinates", size = .8, show.legend = 'point') +
+  scale_color_manual(values = c("Estação com maior\nvalorização" = 'green', 
+                                "Estação com menor\nvalorização" = 'orange',
+                                "Ruas mais valorizadas" = 'black'),
+                     name = '',
+                     guide = guide_legend(override.aes = list(linetype=c("blank", "blank", "solid"),
+                                                              shape=c(16, 16, NA)))) +
+  coord_sf(xlim = c(-43.78, -43.15), ylim = c(-22.78, -23.07)) +
+  labs(x = NULL, y = NULL) +
+  annotation_scale(location = 'br')+
+  annotation_north_arrow(location = 'tl', 
+                         style = north_arrow_fancy_orienteering()) +
+  theme_classic() +
+  theme(legend.position = 'bottom',
+        plot.title = element_text(hjust = 0.5))
+
+
+
+
+ggsave('output/01_entorno_mapas/valorizacao_2011-2016.png', scale = 1, width = 9, height = 6, dpi = 600)
+
+
+
+
 
 
 

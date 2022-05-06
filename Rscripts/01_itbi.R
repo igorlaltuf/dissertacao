@@ -5,7 +5,7 @@ options(scipen = 9999)
 # 1 - unificar shapes de trechos de ruas em ruas inteiras -------------------------
 # rodar apenas 1 vez (demora 25 minutos).
 
-
+## fonte: https://www.data.rio/datasets/PCRJ::logradouros/about 
 # shapes_ruas <- sf::st_read('input/Logradouros/Logradouros.shp') %>% 
 #   janitor::clean_names() %>%   
 #   select(cl) 
@@ -55,7 +55,8 @@ itbi <- itbi[!(itbi$cl == "031351" & itbi$ano_transacao == 2011),]
 
 
 # shape das ruas para fazer left join pela variável cl (ainda não fiz)
-shape_ruas <- sf::st_read('output/shape_ruas_rj/ruas_rio.shp')
+shape_ruas <- sf::st_read('output/shape_ruas_rj/ruas_rio.shp') 
+
 
 # deflacionar valores acima (e recalcular scripts abaixo).
 
@@ -94,9 +95,14 @@ itbi_m2_bairro <- itbi_m2_rua %>%
 #                          style = north_arrow_fancy_orienteering()) +
 #   theme_classic() 
 # 
-# 
-# ruas_2010 <- left_join(shape_ruas, itbi_m2_rua, by = 'cl') %>% 
+
+# Ruas com dados para ITBI no recorte da pesquisa (aptos, compra e venda, residenciais)
+# ruas_2010 <- left_join(shape_ruas, itbi_m2_rua, by = 'cl') %>%
+#   select(cl, x2010) %>% 
+#   unique() %>% 
+#   na.omit() %>% 
 #   dplyr::filter(x2010 > 0)
+
 # 
 # b <- ggplot() +
 #   geom_sf(data = rj) +
@@ -113,5 +119,3 @@ itbi_m2_bairro <- itbi_m2_rua %>%
 # 
 # ggsave('output/01_entorno_mapas/ruas_vs_ruas_dados_itbi_2010.png', scale = 1.2, width = 9, height = 6, dpi = 600)
 # 
-
-

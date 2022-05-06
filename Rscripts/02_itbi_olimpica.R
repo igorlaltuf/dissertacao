@@ -265,19 +265,36 @@ df_brt <- left_join(df_15_min, df_45_min, by = c('fromPlace')) %>%
 # tabela final:
 df_brt
 
+
+ruas_entorno_4 <- comp_ruas_estacao %>% 
+  dplyr::filter(qtd_ruas_15_min >= 4) %>% 
+  select(fromPlace) %>% 
+  as_vector()
+
+df_brt_entorno_4 <- df_brt %>% 
+  dplyr::filter(fromPlace %in% ruas_entorno_4)
+
+
+write.csv2(comp_ruas_estacao, 'output/01_entorno_tabelas/ruas_entorno_olimpica.csv',
+           row.names = F, fileEncoding = 'UTF-8')
+
+write.csv2(df_brt_entorno_4, 'output/01_entorno_tabelas/valoriz_olimpica.csv',
+           row.names = F, fileEncoding = 'UTF-8')
+
+
 # check_1 compara as ruas no entorno de até 15 minutos com aquelas no entorno de 45 min.
 # check_2 compara as ruas no entorno de até 15 minutos com a média do bairro.
 
 
 # 6 Comentários --------------------------------------------------------------------------------------
 
-# das 50 estações do corredor transcarioca, foram analisadas 48 estações.
-sum(df_brt$check_1) # apenas 17 das 48 estações analisadas registraram uma valorização do entorno no check 1
-sum(df_brt$check_1) / 48 # apenas 35% das estações valorizou acima do entorno.
 
-sum(df_brt$check_2, na.rm = T) # nenhuma das 45 restações valorizou acima do bairro. 
+sum(df_brt$check_1) 
+sum(df_brt$check_1) / 48 #
 
-# sem dados para os bairros da maré, vaz lobo e cidade universitária = explica a diferença entre 45 e 48 bairros nos checks.
+sum(df_brt$check_2, na.rm = T)  
+
+
 
 
 # 7 - Mapas --------------------------------------------------------------------------------------------
