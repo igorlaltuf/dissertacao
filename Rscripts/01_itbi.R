@@ -119,3 +119,9 @@ itbi_m2_bairro <- itbi_m2_rua %>%
 # 
 # ggsave('output/01_entorno_mapas/ruas_vs_ruas_dados_itbi_2010.png', scale = 1.2, width = 9, height = 6, dpi = 600)
 # 
+
+
+# Anotações metodológicas da dissertação:
+# Os dados de uma mesma rua são separados por bairros (ou seja, pedaços de uma mesma rua em bairros diferentes contêm valores diferentes).
+# Falar da remoção de outlier (ponto de alavancagem). em três ruas em 2011.
+# Falar que não tenho como saber a posição dos imóveis nas ruas.

@@ -272,7 +272,6 @@ write.csv2(df_brt_entorno_4, 'output/01_entorno_tabelas/valoriz_oeste.csv',
 
 
 sum(df_brt$check_1) 
-sum(df_brt$check_1) / 48 
 
 sum(df_brt$check_2, na.rm = T) 
 
