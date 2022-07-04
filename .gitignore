@@ -6,8 +6,11 @@
 .httr-oauth
 .DS_Store
 *.env
-/input/dados_fin_bndes
-/input/rdo-brt
-/input/covid
-/input/dados zap imoveis
+input/dados_fin_bndes
+input/rdo-brt
+input/rdo-brt-novo
+input/rdo-rem
+input/outros brt estações
+input/covid
+input/dados zap imoveis
 /temp
