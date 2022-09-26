@@ -112,20 +112,25 @@ shape_rio <- geobr::read_municipality(code_muni = 3304557)
 
 
 # Mapa dos lançamentos imobiliários na cidade do Rio de Janeiro
+brt <- read_sf('input/trajeto_BRT/Trajetos_BRT.shp') %>% 
+  filter(Nome != 'TransBrasil')
 
 ggplot() +
   geom_sf(data = shape_rio) +
   geom_sf(data = dados_espaciais, 
           aes(fill = total_unidades), 
-          size = .4, 
-          alpha= .3) +
+          size = .6, 
+          alpha= .5) +
+  geom_sf(data = brt, size = .5) +
   annotation_north_arrow(location='tl', 
                          style = north_arrow_fancy_orienteering()) +
   annotation_scale(location = 'br')+
   theme_classic() +
   theme(legend.position = 'none') 
   
-  
+
+ggsave(filename = 'output/mapa_brt_zap.png', dpi = 600)
+
   
 # Mapa dos lançamentos imobiliários ponderado pela quantidade de unidades
 ggplot() +
